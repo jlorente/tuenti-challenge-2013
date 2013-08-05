@@ -6,11 +6,10 @@
  * Challenge 6 
  * Ice Cave
  * 
- * ###TROUBLE WITH RECURSION - Nesting Level of 100 reached in big maps###
- * 
  * @author Jose Lorente Martin
  */
 require_once 'IceCave.php';
+require_once 'Robot.php';
 
 $stdin = fopen('php://stdin', 'r');
 $testNumber = (int) trim(fgets($stdin));
@@ -23,5 +22,7 @@ for ($i = 0; $i < $testNumber; ++$i) {
         $iceCave->addMapLine($str);
     }
     
-    echo $iceCave->getMinSeconds().PHP_EOL;
+    $robot = new IceCave\Robot($iceCave);
+    $robot->start();
+    echo $robot->getMinSecondsSpent().PHP_EOL;
 }

@@ -3,16 +3,7 @@
  * @author Jose Lorente Martin
  */
 class IceCave
-{
-    protected static $nestingControl = 100;
-    
-    protected static $movements = array(
-                                    'N'   => array('x' => -1, 'y' =>  0),
-                                    'E'   => array('x' =>  0, 'y' =>  1),
-                                    'S'	  => array('x' =>  1, 'y' =>  0),
-                                    'W'   => array('x' =>  0, 'y' => -1)
-                                 );
-                                     
+{                            
     protected $rows;
     
     protected $columns;
@@ -23,17 +14,13 @@ class IceCave
     
     protected $freezeTime;
     
-    protected $virtualSeconds;
-   
-    protected $minSeconds;
+    protected $initX;
     
-    protected $currentX;
+    protected $initY;
     
-    protected $currentY;
+    protected $exitX;
     
-    protected $lastCoords;
-    
-    protected $secuence;
+    protected $exitY;
     
     public function __construct($physics)
     {
@@ -51,9 +38,29 @@ class IceCave
         return $this->rows;
     }
     
-    public function getCurrentPosition()
+    public function getInitPosition()
     {
-        return $this->currentX.','.$this->currentY;
+        return array($this->initX, $this->initY);
+    }
+    
+    public function getExitPosition()
+    {
+        return array($this->exitX, $this->exitY);     
+    }
+    
+    public function getMap()
+    {
+        return $this->map;
+    }
+    
+    public function getFreezeTime()
+    {
+        return $this->freezeTime;    
+    }
+    
+    public function getSpeed()
+    {
+        return $this->speed;
     }
     
     public function addMapLine($line)
@@ -62,8 +69,11 @@ class IceCave
         for ($i = 0; $i < $this->columns; ++$i) {
             $arr[$i] = $line[$i];
             if ($arr[$i] === 'X') {
-                $this->currentX = count($this->map);
-                $this->currentY = $i;
+                $this->initX = count($this->map);
+                $this->initY = $i;
+            } elseif ($arr[$i] === 'O') {
+                $this->exitX = count($this->map);
+                $this->exitY = $i;
             }
         }
         $this->map[] = $arr;
@@ -78,69 +88,5 @@ class IceCave
             echo PHP_EOL;
         }
         echo PHP_EOL;
-    }
-
-    public function getMinSeconds()
-    {
-        if ($this->minSeconds === null) {
-            $this->searchExit();
-        }
-        return (int) round($this->minSeconds, 0);
-    }
-    
-    protected function searchExit()
-    {
-        if (($this->minSeconds !== null && $this->virtualSeconds > $this->minSeconds) || isset($this->secuence[$this->lastCoords])) {
-            return;
-        }
-        
-        if ($this->map[$this->currentX][$this->currentY] === 'O') {
-            $this->minSeconds = $this->virtualSeconds;
-            return;
-        }
-
-        $this->secuence[$this->lastCoords] = 1;
-
-        foreach (self::$movements as $movement) {
-            $this->move($movement['x'], $movement['y']);
-        }
-    }
-
-    protected function move($xInc, $yInc)
-    {
-        if ($this->canMoveToPosition($this->currentX + $xInc, $this->currentY + $yInc) === true) {
-            $xStore = $this->currentX;
-            $yStore = $this->currentY;
-            $lastCoords = $this->lastCoords;
-            $virtualSeconds = $this->virtualSeconds;
-            $secuence = $this->secuence;
-            
-            $this->virtualSeconds += $this->freezeTime;
-
-            $i = 0;
-            while ($this->canMoveToPosition($this->currentX + $xInc, $this->currentY + $yInc) === true) {
-                $this->lastCoords = $this->currentX.','.$this->currentY;
-                
-                ++$i;
-                $this->currentX += $xInc;
-                $this->currentY += $yInc;
-            }
-            
-            $this->virtualSeconds += $i/$this->speed;
-            
-            $this->searchExit();
-   
-            $this->virtualSeconds = $virtualSeconds;
-            $this->currentX = $xStore;
-            $this->currentY = $yStore;
-            $this->lastCoords = $lastCoords;
-            $this->secuence = $secuence;
-        }
-        return;
-    }
-
-    public function canMoveToPosition($posX, $posY)
-    {
-        return isset($this->map[$posX][$posY]) && $this->map[$posX][$posY] !== '#' && $posX.','.$posY !== $this->lastCoords;
     }
 }
