@@ -6,7 +6,7 @@
  * Challenge 11 
  * The escape from Pixel Island
  * 
- * ###NOT FINISHED ALREADY###
+ * This programs requires PHP GD library
  * 
  * @author Jose Lorente Martin
  */
@@ -32,6 +32,6 @@ for ($i = 0; $i < $testNumber; ++$i) {
             $pivot = PixelTree::sum($pivot, $pTrees[$j]);
         }
         
-        echo $pivot.PHP_EOL;
+        echo $pivot->decode().PHP_EOL;
     }
 }

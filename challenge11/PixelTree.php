@@ -5,6 +5,7 @@
 namespace PixelIsland;
 
 use SplQueue;
+use SplStack;
 
 require_once 'Node.php';
 
@@ -16,10 +17,10 @@ class PixelTree
     protected $root;
     
     /**
-     * @var Node[]
+     * @var int
      */
-    protected $nodeNumber;
-
+    protected $height;
+    
     public function __construct(Node $root)
     {
         $this->root = $root;
@@ -63,18 +64,53 @@ class PixelTree
             $queue->enqueue($this->getRoot()->getChildren());
             
             while ($queue->isEmpty() !== true) {
-                $node = $queue->dequeue();
+                $nodeBlock = $queue->dequeue();
                 
-                foreach ($node as $internalNode) {
-                    $string .= $internalNode->getValue();
-                    if ($internalNode->getValue() == 'p') {
-                        $queue->enqueue($internalNode->getChildren());
+                foreach ($nodeBlock as $node) {
+                    $string .= $node->getValue();
+                    if ($node->getValue() == 'p') {
+                        $queue->enqueue($node->getChildren());
                     }
                 }
             }
         }
         
         return $string;
+    }
+    
+    public function getHeight()
+    {
+        if ($this->height === null) {
+            $this->height = 0;
+            if ($this->root->getValue() == 'p') {
+                $stack = new SplStack();
+                
+                $this->root->getChildren()->rewind();
+                $stack->push($this->root->getChildren());
+                
+                while ($stack->isEmpty() !== true) {
+                    $nodeBlock = $stack->pop();
+                      
+                    while ($nodeBlock->valid()) {
+                        $height = $stack->count() + 1;
+                        if ($this->height < $height) {
+                            $this->height = $height;
+                        }
+                        
+                        $node = $nodeBlock->current();
+                        $nodeBlock->next();
+                        
+                        if ($node->getValue() == 'p') {
+                            $nodeBlock = $node->getChildren();
+                            $nodeBlock->rewind();
+                            $stack->push($nodeBlock);
+                        }
+                    }
+                }
+            }
+        }
+        
+        return $this->height;
     }
     
     public function __toString()
@@ -133,8 +169,94 @@ class PixelTree
         }
     }
     
-    public function draw()
+    public function draw($imageName)
     {
+        $size = pow(2, $this->getHeight());
+        $image = imagecreate($size, $size);
+
+        imagecolorallocate($image, 0xFF, 0xFF, 0xFF);
         
+        $blackColor = imagecolorallocate($image, 0x00, 0x00, 0x00);
+        
+        $node = $this->root;
+        
+        if ($this->root->getValue() == 'p') {
+            $this->drawRecursive($this->root->getChildren(), $image, 0, 0, $blackColor);
+        } elseif ($node->getValue() == 'b') {
+            imagefilledrectangle($image, 0, 0, $this->getHeight(), $this->getHeight(), $blackColor);
+        }
+        
+        imagegif($image, $imageName);
+    }
+    
+    protected function drawRecursive($nodeBlock, $image, $x, $y, $blackColor)
+    {
+        static $height = 0;
+        
+        $height++;
+        $pixelSize = pow(2, $this->getHeight() - $height);
+        foreach ($nodeBlock as $key => $node) {
+            switch ($key) {
+                case 0:
+                    $x += $pixelSize;
+                    break;
+                case 2:
+                    $y += $pixelSize;
+                    break;
+                case 3:
+                    $x += $pixelSize;
+                    $y += $pixelSize;
+                    break;
+            }
+            
+            if ($node->getValue() == 'p') {
+                $this->drawRecursive($node->getChildren(), $image, $x, $y, $blackColor);
+            } elseif ($node->getValue() == 'b') {
+                for ($i = 0; $i < $pixelSize; ++$i) {
+                    for ($j = 0; $j < $pixelSize; ++$j) {
+                        imagesetpixel($image, $x + $j, $y + $i, $blackColor);
+                    }
+                }
+            }
+            
+            switch ($key) {
+                case 0:
+                    $x -= $pixelSize;
+                    break;
+                case 2:
+                    $y -= $pixelSize;
+                    break;
+                case 3:
+                    $x -= $pixelSize;
+                    $y -= $pixelSize;
+                    break;
+            }
+        }
+        $height--;
+    }
+    
+    public function decode()
+    {
+        $tmpfname = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'ptree_'.date('YmdHis').'_'.uniqid().'.gif';
+
+        $this->draw($tmpfname);
+        
+        $ch = curl_init();
+        $data = array('name' => 'QR', 'file' => '@'.$tmpfname);
+        curl_setopt($ch, CURLOPT_URL, 'http://zxing.org/w/decode');
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        $response = curl_exec($ch);
+
+        unlink($tmpfname);
+        
+        $data = array();
+        preg_match('/Parsed Result(<.+?>)+(.*?)<.*?>/', $response, $data);  
+        if (isset($data[2])) {
+            return substr(trim(utf8_decode($data[2])), 1);
+        } else {
+            return 'Failed!';
+        }
     }
 }
