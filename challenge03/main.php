@@ -33,7 +33,6 @@ for ($j = 0; $j < $scriptsNumber; ++$j) {
     }
     
     $queue = new SplQueue();
-    $stack = new SplStack();
     $i = 0;
     $invalid = false;
     foreach (Scene::getScenes() as $scene) {
@@ -44,7 +43,6 @@ for ($j = 0; $j < $scriptsNumber; ++$j) {
                 break;
             }
             $queue->enqueue($scene);
-            $stack->push($scene);
         }
     }
    
@@ -53,17 +51,16 @@ for ($j = 0; $j < $scriptsNumber; ++$j) {
         $nonUnique = false;
         while ($queue->isEmpty() !== true) {
             $scene = $queue->dequeue();
-            $sceneCheck = $stack->pop();
             $orderedScenes[] = $scene;
             
-            if ($sceneCheck !== $scene) {
-                $nonUnique = true;
-            }
-    
+            $i = 0;
             while (($nextScene = Edge::popNext($scene)) !== null) {
                 if (Edge::getPreviousCount($nextScene) <= 0) {
+                    $i++;
+                    if ($i > 1) {
+                        $nonUnique = true;
+                    }
                     $queue->enqueue($nextScene);
-                    $stack->push($nextScene);
                 }
             }
         }
